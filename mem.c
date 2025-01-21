@@ -28,9 +28,18 @@ struct rom bootrom;
  * make the old maps potentially invalid.
  */
 
+static byte dummybank[64*1024];
+
 void mem_mapbootrom() {
-	if (!bootrom.bank) return;
-	mbc.rmap[0x0] = bootrom.bank[0];
+	int i;
+	for (i=0; i<64*1024; i++) {
+		dummybank[i]= 0xff;
+	}
+	if (bootrom.bank) {
+		mbc.rmap[0x0] = bootrom.bank[0];		
+	}
+	mbc.rfmap[0x0] = mbc.rmap[0x0];
+	mem_updatemap();
 }
 
 void mem_updatemap()
@@ -43,39 +52,43 @@ void mem_updatemap()
 
 	map = mbc.rmap;
 	/* don't unmap bootrom unless RI_BOOT was locked */
-	if (REG(RI_BOOT) & 1) map[0x0] = rom.bank[0];
+	if ((REG(RI_BOOT) & 1) || !bootrom.bank) {
+		map[0x0] = rom.bank[0];
+	} else {
+		map[0x0] = bootrom.bank[0];
+	}
 	map[0x1] = rom.bank[0];
 	map[0x2] = rom.bank[0];
 	map[0x3] = rom.bank[0];
-	if (mbc.rombank < mbc.romsize)
-	{
-		map[0x4] = rom.bank[mbc.rombank] - 0x4000;
-		map[0x5] = rom.bank[mbc.rombank] - 0x4000;
-		map[0x6] = rom.bank[mbc.rombank] - 0x4000;
-		map[0x7] = rom.bank[mbc.rombank] - 0x4000;
-	}
-	else map[0x4] = map[0x5] = map[0x6] = map[0x7] = NULL;
-	if (0 && (R_STAT & 0x03) == 0x03)
-	{
-		map[0x8] = NULL;
-		map[0x9] = NULL;
-	}
-	else
-	{
-		map[0x8] = lcd.vbank[R_VBK & 1] - 0x8000;
-		map[0x9] = lcd.vbank[R_VBK & 1] - 0x8000;
-	}
+
+	map[0x4] = rom.bank[mbc.rombank] - 0x4000;
+	map[0x5] = rom.bank[mbc.rombank] - 0x4000;
+	map[0x6] = rom.bank[mbc.rombank] - 0x4000;
+	map[0x7] = rom.bank[mbc.rombank] - 0x4000;
+
+	map[0x8] = lcd.vbank[R_VBK & 1] - 0x8000;
+	map[0x9] = lcd.vbank[R_VBK & 1] - 0x8000;
+
 	if (mbc.enableram && !(rtc.sel&8))
 	{
 		map[0xA] = ram.sbank[mbc.rambank] - 0xA000;
 		map[0xB] = ram.sbank[mbc.rambank] - 0xA000;
 	}
-	else map[0xA] = map[0xB] = NULL;
+	else
+	{
+		map[0xA] = map[0xB] = NULL;
+	}
+
 	map[0xC] = ram.ibank[0] - 0xC000;
 	n = R_SVBK & 0x07;
 	map[0xD] = ram.ibank[n?n:1] - 0xD000;
 	map[0xE] = ram.ibank[0] - 0xE000;
 	map[0xF] = NULL;
+
+	for (n=0; n<0xF; n++) {
+		mbc.rfmap[n] = mbc.rmap[n] ? mbc.rmap[n] : (dummybank - (n << 12));
+	}
+	mbc.rfmap[0xF] = ram.hi - 0xFF00;
 
 	map = mbc.wmap;
 	map[0x0] = map[0x1] = map[0x2] = map[0x3] = NULL;
@@ -92,6 +105,11 @@ void mem_updatemap()
 	map[0xD] = ram.ibank[n?n:1] - 0xD000;
 	map[0xE] = ram.ibank[0] - 0xE000;
 	map[0xF] = NULL;
+
+	for (n=0; n<0xF; n++) {
+		mbc.wfmap[n] = mbc.wmap[n] ? mbc.wmap[n] : (dummybank - (n << 12));
+	}
+	mbc.wfmap[0xF] = ram.hi - 0xFF00;
 }
 
 
@@ -534,21 +552,26 @@ void mem_write(int a, byte b)
 byte mem_read(int a)
 {
 	int n;
-	byte ha = (a>>12) & 0xE;
+	byte ha = (a>>12);
 	
 	/* printf("read %04x\n", a); */
 	switch (ha)
 	{
 	case 0x0:
+	case 0x1:
 	case 0x2:
+	case 0x3:
 		return rom.bank[0][a];
 	case 0x4:
+	case 0x5:
 	case 0x6:
+	case 0x7:
 		return rom.bank[mbc.rombank][a & 0x3FFF];
 	case 0x8:
-		/* if ((R_STAT & 0x03) == 0x03) return 0xFF; */
+	case 0x9:
 		return lcd.vbank[R_VBK&1][a & 0x1FFF];
 	case 0xA:
+	case 0xB:
 		if (!mbc.enableram && mbc.type == MBC_HUC3)
 			return 0x01;
 		if (!mbc.enableram)
@@ -557,19 +580,19 @@ byte mem_read(int a)
 			return rtc.regs[rtc.sel&7];
 		return ram.sbank[mbc.rambank][a & 0x1FFF];
 	case 0xC:
-		if ((a & 0xF000) == 0xC000)
-			return ram.ibank[0][a & 0x0FFF];
+		return ram.ibank[0][a & 0x0FFF];
+	case 0xD:
 		n = R_SVBK & 0x07;
 		return ram.ibank[n?n:1][a & 0x0FFF];
 	case 0xE:
+		return ram.ibank[0][a & 0x0FFF];
+	case 0xF:
 		if (a < 0xFE00) return mem_read(a & 0xDFFF);
 		if ((a & 0xFF00) == 0xFE00)
 		{
-			/* if (R_STAT & 0x02) return 0xFF; */
 			if (a < 0xFEA0) return lcd.oam.mem[a & 0xFF];
 			return 0xFF;
 		}
-		/* return readhi(a & 0xFF); */
 		if (a == 0xFFFF) return REG(0xFF);
 		if (a >= 0xFF10 && a <= 0xFF3F)
 			return sound_read(a & 0xFF);

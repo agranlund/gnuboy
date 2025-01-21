@@ -21,6 +21,45 @@ static void writeb(int a, byte b)
 	else mem_write(a, b);
 }
 
+#if 1
+
+#define writeb_romram(a,b) writeb(a,b)
+
+static inline byte readb_romram(int a)
+{
+    byte *p = mbc.rfmap[a>>12];
+    return p[a];
+}
+
+static int readw_romram(int a)
+{
+    byte *p = mbc.rfmap[a>>12];
+    word w = *(word *)(p+a);
+#ifdef IS_LITTLE_ENDIAN
+    return w;
+#else
+    return __builtin_bswap16(w);
+#endif
+}
+
+static void writew_romram(int a, int b)
+{
+    byte *p = mbc.wfmap[a>>12];
+#ifdef IS_LITTLE_ENDIAN
+    *(word *)(p+a) = (word)b;
+#else
+    *(word *)(p+a) = __builtin_bswap16((word)b);
+#endif    
+}
+
+#else
+#define readb_romram(a) readb(a)
+#define readw_romram(a) readw(a)
+#define writeb_romram(a,b) writeb(a,b)
+#define writew_romram(a,b) writew(a,b)
+#endif
+
+
 static int readw(int a)
 {
 	if ((a+1) & 0xfff)

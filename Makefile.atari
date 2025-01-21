@@ -1,0 +1,69 @@
+#
+# Makefile.nix
+#
+# This is a *bare minimum* makefile for building gnuboy on *nix systems.
+# If you have trouble with the configure script you can try using this,
+# but *please* try the configure script first. This file is mostly
+# unmaintained and may break.
+#
+# If you *do* insist on using this makefile, you at least need to check
+# SYS_DEFS below and uncomment -DIS_LITTLE_ENDIAN if your system is
+# little endian. Also, you may want to enable the OSS sound module if
+# your system supports it.
+#
+
+cross_prefix = /opt/cross-mint/m68k-atari-mint
+prefix = /usr/local
+bindir = /bin
+
+CC = m68k-atari-mint-gcc
+AS = $(CC)
+LD = $(CC)
+STRIP = m68k-atari-mint-strip
+
+INSTALL = /bin/install -c
+
+#CPUFLAGS = -m68000 -msoft-float
+CPUFLAGS = -m68060
+
+CFLAGS = $(CPUFLAGS) -DATARI -O3 -fomit-frame-pointer
+LDFLAGS = -m68000 -L$(cross_prefix)/lib
+ASFLAGS = 
+
+SYS_DEFS = -DALLOW_UNALIGNED_IO
+ASM_OBJS = 
+SND_OBJS = sys/atari/atari-sound.o
+JOY_OBJS = sys/sdl/sdl-joystick.o
+
+TARGETS = gnuboy
+TARGET_EXE = gnuboy.prg
+
+SYS_OBJS = sys/atari/atari.o $(ASM_OBJS) $(SND_OBJS) $(JOY_OBJS)
+SYS_INCS = -I$(cross_prefix)/include -I$(cross_prefix)/include/SDL -I./sys/sdl
+
+SDL_OBJS = sys/sdl/keymap.o
+SDL_LIBS = -lm -lsdl -lgem
+
+all: $(TARGETS)
+
+include Rules
+
+gnuboy: $(OBJS) $(SYS_OBJS) $(SDL_OBJS)
+	$(LD) $(LDFLAGS) $(OBJS) $(SYS_OBJS) $(SDL_OBJS) -o $@ $(SDL_LIBS)
+	$(STRIP) $@
+	cp $@ $(TARGET_EXE) 
+
+clean:
+	rm -f *gnuboy gmon.out *.o sys/*.o sys/*/*.o asm/*/*.o
+
+
+
+
+
+
+
+
+
+
+
+

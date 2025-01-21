@@ -45,20 +45,26 @@ byte patpix[4096][8][8];
 byte patdirty[1024];
 byte anydirty;
 
+#if defined(ATARI)
+# define MAX_SCALE 1
+int rgb332 = 1;
+static int sprsort = 0;
+#else
 # define MAX_SCALE 4
+int rgb332 = 0;
+static int sprsort = 1;
+#endif
+
 static int scale = 1;
 static int density = 0;
-
-static int rgb332;
-
-static int sprsort = 1;
-static int sprdebug;
+static int sprdebug = 0;
 
 #define DEF_PAL { 0x98d0e0, 0x68a0b0, 0x60707C, 0x2C3C3C }
 
 static int dmg_pal[4][4] = { DEF_PAL, DEF_PAL, DEF_PAL, DEF_PAL };
 
-static int usefilter, filterdmg;
+static int usefilter = 0;
+static int filterdmg = 0;
 static int filter[3][4] = {
 	{ 195,  25,   0,  35 },
 	{  25, 170,  25,  35 },
@@ -565,7 +571,7 @@ void spr_scan()
 
 
 
-
+static int lcd_lines_refreshed = 0;
 
 void lcd_begin()
 {
@@ -579,6 +585,7 @@ void lcd_begin()
 		- (80*fb.pelsize) * scale
 		+ ((fb.h>>1) - 72*scale) * fb.pitch;
 	WY = R_WY;
+	lcd_lines_refreshed = 0;
 }
 
 void lcd_linetovram() {
@@ -586,6 +593,7 @@ void lcd_linetovram() {
 	byte scalebuf[160*4*MAX_SCALE], *dest;
 	if (density > scale) density = scale;
 	if (scale == 1 || fb.delegate_scaling) density = 1;
+	if (lcd_lines_refreshed >= 144) return;
 
 	work_scale = fb.delegate_scaling ? 1: scale;
 
@@ -679,6 +687,8 @@ void lcd_linetovram() {
 		}
 	}
 	else vdest += fb.pitch * work_scale;
+
+	lcd_lines_refreshed++;
 }
 
 void lcd_refreshline()

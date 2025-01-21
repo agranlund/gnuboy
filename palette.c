@@ -13,6 +13,8 @@ static byte crsmap[4][32768];
 static int crsrev[4][256];
 static const int crsmask[4] = { 0x7BDE, 0x739C, 0x6318, 0x4210 };
 
+extern int rgb332;
+
 enum plstatus
 {
 	pl_unused = 0,
@@ -89,6 +91,10 @@ byte pal_getcolor(int c, int r, int g, int b)
 {
 	byte n;
 	static byte l;
+
+	if (rgb332)
+		return (b & 0xC0) | ((g & 0xE0) >> 3) | (r >> 5);
+
 	n = palmap[c];
 	if (n && pallock[n] && palrev[n] == c)
 	{

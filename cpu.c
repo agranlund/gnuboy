@@ -27,17 +27,20 @@ struct cpu cpu;
 #define HFLAG(n) ( (n) ? 0 : FH )
 #define CFLAG(n) ( (n) ? 0 : FC )
 
+#if 1
+	#define PUSH(w) ( (SP -= 2), (writew_romram(xSP, (w))) )
+	#define POP(w) ( ((w) = readw_romram(xSP)), (SP += 2) )
+	#define FETCH (readb_romram(PC++))
+#else
+	#define PUSH(w) ( (SP -= 2), (writew(xSP, (w))) )
+	#define POP(w) ( ((w) = readw(xSP)), (SP += 2) )
 
-#define PUSH(w) ( (SP -= 2), (writew(xSP, (w))) )
-#define POP(w) ( ((w) = readw(xSP)), (SP += 2) )
+	#define FETCH_OLD ( mbc.rmap[PC>>12] \
+	? mbc.rmap[PC>>12][PC++] \
+	: mem_read(PC++) )
 
-
-#define FETCH_OLD ( mbc.rmap[PC>>12] \
-? mbc.rmap[PC>>12][PC++] \
-: mem_read(PC++) )
-
-#define FETCH (readb(PC++))
-
+	#define FETCH (readb(PC++))
+#endif
 
 #define INC(r) { ((r)++); \
 F = (F & (FL|FC)) | incflag_table[(r)]; }
@@ -359,9 +362,9 @@ extern int debug_trace;
 
 int cpu_emulate(int cycles)
 {
-	int i;
+	int i,j;
 	byte op, cbop;
-	int clen;
+	int clen, clen_total;
 	static union reg acc;
 	static byte b;
 	static word w;
@@ -397,8 +400,14 @@ next:
 		}
 	}
 	IME = IMA;
-	
+
+#if defined(ATARI)
+	clen_total = 0;
+	while(clen_total < cpu.lcdc)
+	{
+#else
 	if (debug_trace) debug_disassemble(PC, 1);
+#endif		
 	op = FETCH;
 	clen = cycles_table[op];
 
@@ -505,21 +514,19 @@ next:
 		L = A; break;
 			
 	case 0x70: /* LD (HL),B */
-		b = B; goto __LD_HL;
+		writeb(xHL, B); break; 
 	case 0x71: /* LD (HL),C */
-		b = C; goto __LD_HL;
+		writeb(xHL, C); break; 
 	case 0x72: /* LD (HL),D */
-		b = D; goto __LD_HL;
+		writeb(xHL, D); break; 
 	case 0x73: /* LD (HL),E */
-		b = E; goto __LD_HL;
+		writeb(xHL, E); break; 
 	case 0x74: /* LD (HL),H */
-		b = H; goto __LD_HL;
+		writeb(xHL, H); break; 
 	case 0x75: /* LD (HL),L */
-		b = L; goto __LD_HL;
+		writeb(xHL, L); break; 
 	case 0x77: /* LD (HL),A */
-		b = A;
-	__LD_HL:
-		writeb(xHL,b);
+		writeb(xHL, A); break; 
 		break;
 			
 	case 0x78: /* LD A,B */
@@ -627,16 +634,13 @@ next:
 		ALU_CASES(0xB8, 0xFE, CP, __CP)
 
 	case 0x09: /* ADD HL,BC */
-		w = BC; goto __ADDW;
+		ADDW(BC); break;
 	case 0x19: /* ADD HL,DE */
-		w = DE; goto __ADDW;
+		ADDW(DE); break;
 	case 0x39: /* ADD HL,SP */
-		w = SP; goto __ADDW;
+		ADDW(SP); break;
 	case 0x29: /* ADD HL,HL */
-		w = HL;
-	__ADDW:
-		ADDW(w);
-		break;
+		ADDW(HL); break;
 
 	case 0x04: /* INC B */
 		INC(B); break;
@@ -787,23 +791,21 @@ next:
 		if (F&FC) goto __CALL; NOCALL; break;
 
 	case 0xC7: /* RST 0 */
-		b = 0x00; goto __RST;
+		RST(0x00); break;
 	case 0xCF: /* RST 8 */
-		b = 0x08; goto __RST;
+		RST(0x08); break;
 	case 0xD7: /* RST 10 */
-		b = 0x10; goto __RST;
+		RST(0x10); break;
 	case 0xDF: /* RST 18 */
-		b = 0x18; goto __RST;
+		RST(0x18); break;
 	case 0xE7: /* RST 20 */
-		b = 0x20; goto __RST;
+		RST(0x20); break;
 	case 0xEF: /* RST 28 */
-		b = 0x28; goto __RST;
+		RST(0x28); break;
 	case 0xF7: /* RST 30 */
-		b = 0x30; goto __RST;
+		RST(0x30); break;
 	case 0xFF: /* RST 38 */
-		b = 0x38;
-	__RST:
-		RST(b); break;
+		RST(0x38); break;
 			
 	case 0xC1: /* POP BC */
 		POP(BC); break;
@@ -895,6 +897,11 @@ next:
 			op, (PC-1) & 0xffff, mbc.rombank);
 		break;
 	}
+#if defined(ATARI)    
+	clen_total += clen;
+	}
+	clen = clen_total;
+#endif    
 
 	clen <<= 1;
 	div_advance(clen);

@@ -27,6 +27,7 @@ struct mbc
 	int enableram;
 	int batt;
 	byte *rmap[0x10], *wmap[0x10];
+	byte *rfmap[0x10], *wfmap[0x10];
 };
 
 struct rom
