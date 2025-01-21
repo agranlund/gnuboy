@@ -1,15 +1,5 @@
 #
-# Makefile.nix
-#
-# This is a *bare minimum* makefile for building gnuboy on *nix systems.
-# If you have trouble with the configure script you can try using this,
-# but *please* try the configure script first. This file is mostly
-# unmaintained and may break.
-#
-# If you *do* insist on using this makefile, you at least need to check
-# SYS_DEFS below and uncomment -DIS_LITTLE_ENDIAN if your system is
-# little endian. Also, you may want to enable the OSS sound module if
-# your system supports it.
+# Makefile.atari
 #
 
 cross_prefix = /opt/cross-mint/m68k-atari-mint
