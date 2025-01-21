@@ -1,3 +1,5 @@
 *.o
 *gnuboy
 config.*
+roms/*
+.DS_Store
