@@ -22,8 +22,8 @@ extern int  pcm_submit_sdl();
 extern void pcm_sync_sdl();
 extern void pcm_pause_sdl(int dopause);
 
-void pcm_unassigned0() { }
-int  pcm_unassigned1() { return 1; }
+void pcm_unassigned0() { pcm.pos = 0; }
+int  pcm_unassigned1() { pcm.pos = 0; return 1; }
 void (*atari_pcm_close)(void) = pcm_unassigned0;
 int  (*atari_pcm_submit)(void) = pcm_unassigned1;
 void (*atari_pcm_sync)(void) = pcm_unassigned0;
