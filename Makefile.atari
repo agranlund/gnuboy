@@ -13,9 +13,11 @@ STRIP = m68k-atari-mint-strip
 
 INSTALL = /bin/install -c
 
-CPUFLAGS = -m68060
+#CPUFLAGS = -m68060
+CPUFLAGS = -m68020-60
 
-CFLAGS = $(CPUFLAGS) -DATARI -O3 -fomit-frame-pointer
+AUDIOFLAGS = -DSOUND_ENABLE_SOUNDBLASTER=1 -DSOUND_ENABLE_SDL=1
+CFLAGS = $(CPUFLAGS) -DATARI $(AUDIOFLAGS) -O3 -fomit-frame-pointer
 LDFLAGS = -m68000 -L$(cross_prefix)/lib
 ASFLAGS = 
 
