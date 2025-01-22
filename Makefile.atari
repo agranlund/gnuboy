@@ -54,13 +54,12 @@ dist:
 	make -f Makefile.atari clean
 	make -f Makefile.atari
 	cp gnuboy.prg gnuboy/gnuboy.prg
-	cp ../SDL-1.2/README.MiNT gnuboy/readme.sdl
 	rm -f gnuboy.zip
 	zip -o gnuboy.zip gnuboy/*
 
-#	gh release delete latest --cleanup-tag -y
-#	gh release create latest --notes "latest"
-#	gh release upload latest gnuboy.zip --clobber
+	gh release delete latest --cleanup-tag -y
+	gh release create latest --notes "latest"
+	gh release upload latest gnuboy.zip --clobber
 
 
 
