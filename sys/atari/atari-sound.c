@@ -8,7 +8,9 @@ extern int  pcm_init_null();
 extern void pcm_close_null();
 extern int  pcm_submit_null();
 extern void pcm_sync_null();
+extern void pcm_sync_null_off();
 extern void pcm_pause_null(int dopause);
+
 
 extern int  pcm_init_sb();
 extern void pcm_close_sb();
@@ -22,12 +24,10 @@ extern int  pcm_submit_sdl();
 extern void pcm_sync_sdl();
 extern void pcm_pause_sdl(int dopause);
 
-void pcm_unassigned0() { pcm.pos = 0; }
-int  pcm_unassigned1() { pcm.pos = 0; return 1; }
-void (*atari_pcm_close)(void) = pcm_unassigned0;
-int  (*atari_pcm_submit)(void) = pcm_unassigned1;
-void (*atari_pcm_sync)(void) = pcm_unassigned0;
-void (*atari_pcm_pause)(int) = pcm_unassigned0;
+void (*atari_pcm_close)(void);
+int  (*atari_pcm_submit)(void);
+void (*atari_pcm_sync)(void);
+void (*atari_pcm_pause)(int);
 
 /* -----------------------------------------------------------------------------------
  * 
@@ -36,6 +36,7 @@ void (*atari_pcm_pause)(int) = pcm_unassigned0;
  * ---------------------------------------------------------------------------------*/
 
 struct pcm pcm;
+
 
 static int sound = 1;
 static int sound_null = 1;
@@ -69,10 +70,11 @@ void pcm_init()
         atari_pcm_sync = pcm_sync_sdl;
         atari_pcm_pause = pcm_pause_sdl;
     }
-    else if (sound_null && pcm_init_null()) {
+    else {
+        pcm_init_null();
         atari_pcm_close = pcm_close_null;
         atari_pcm_submit = pcm_submit_null;
-        atari_pcm_sync = pcm_sync_null;
+        atari_pcm_sync = sound_null ? pcm_sync_null : pcm_sync_null_off;
         atari_pcm_pause = pcm_pause_null;
     }
 }

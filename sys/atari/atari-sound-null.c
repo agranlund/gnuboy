@@ -26,6 +26,10 @@ int pcm_submit_null() {
 	return 0;
 }
 
+void pcm_sync_null_off() {
+    pcm.pos = 0;
+}
+
 void pcm_sync_null() {
     if (!pcm_submit_null()) {
         int framelen = (16743 << 1);
