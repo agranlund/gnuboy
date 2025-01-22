@@ -13,7 +13,6 @@ STRIP = m68k-atari-mint-strip
 
 INSTALL = /bin/install -c
 
-#CPUFLAGS = -m68000 -msoft-float
 CPUFLAGS = -m68060
 
 CFLAGS = $(CPUFLAGS) -DATARI -O3 -fomit-frame-pointer
@@ -22,11 +21,10 @@ ASFLAGS =
 
 SYS_DEFS = -DALLOW_UNALIGNED_IO
 ASM_OBJS = 
-SND_OBJS = sys/atari/atari-sound.o
+SND_OBJS = sys/atari/atari-sound.o sys/atari/atari-sound-sb.o sys/atari/atari-sound-sdl.o sys/atari/atari-sound-null.o 
 JOY_OBJS = sys/sdl/sdl-joystick.o
 
-TARGETS = gnuboy
-TARGET_EXE = gnuboy.prg
+TARGETS = gnuboy.prg
 
 SYS_OBJS = sys/atari/atari.o $(ASM_OBJS) $(SND_OBJS) $(JOY_OBJS)
 SYS_INCS = -I$(cross_prefix)/include -I$(cross_prefix)/include/SDL -I./sys/sdl
@@ -38,13 +36,31 @@ all: $(TARGETS)
 
 include Rules
 
-gnuboy: $(OBJS) $(SYS_OBJS) $(SDL_OBJS)
+gnuboy.prg: $(OBJS) $(SYS_OBJS) $(SDL_OBJS)
 	$(LD) $(LDFLAGS) $(OBJS) $(SYS_OBJS) $(SDL_OBJS) -o $@ $(SDL_LIBS)
 	$(STRIP) $@
-	cp $@ $(TARGET_EXE) 
 
+.PHONY: clean
 clean:
-	rm -f *gnuboy gmon.out *.o sys/*.o sys/*/*.o asm/*/*.o
+	rm -f $(TARGETS) gmon.out *.o sys/*.o sys/*/*.o asm/*/*.o
+
+
+.PHONY: dist
+dist:
+	mkdir -p gnuboy
+	rm -f gnuboy/*
+	cp COPYING gnuboy/copying
+	cp README.atari gnuboy/readme
+	make -f Makefile.atari clean
+	make -f Makefile.atari
+	cp gnuboy.prg gnuboy/gnuboy.prg
+	cp ../SDL-1.2/README.MiNT gnuboy/readme.sdl
+	rm -f gnuboy.zip
+	zip -o gnuboy.zip gnuboy/*
+
+#	gh release delete latest --cleanup-tag -y
+#	gh release create latest --notes "latest"
+#	gh release upload latest gnuboy.zip --clobber
 
 
 

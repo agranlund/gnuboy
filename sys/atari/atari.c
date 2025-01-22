@@ -201,15 +201,9 @@ static SDL_Color sdl_pal[256];
 
 void vid_setpal(int i, int r, int g, int b)
 {
-#if 1
     sdl_pal[i & 0xff].r = r;
     sdl_pal[i & 0xff].g = g;
     sdl_pal[i & 0xff].b = b;
-#else    
-	SDL_Color col;
-	col.r = r; col.g = g; col.b = b;
-	SDL_SetColors(screen, &col, i, 1);
-#endif    
 }
 
 void vid_preinit()
@@ -257,8 +251,8 @@ void vid_end()
 	SDL_UnlockSurface(screen);
 	if (fb.enabled) {
 #if 1
-        Sint32 offs_x = (320 - 160) / 2;
-        Sint32 offs_y = (200 - 144) / 2;
+        Sint32 offs_x = (vmode[0] - 160) / 2;
+        Sint32 offs_y = (vmode[1] - 144) / 2;
         SDL_UpdateRect(screen, offs_x, offs_y, 160, 144);
 #else
         SDL_Flip(screen);
@@ -289,12 +283,7 @@ int sys_elapsed(Uint32 *cl)
 
 void sys_sleep(int us)
 {
-	/* dbk: for some reason 2000 works..
-	   maybe its just compensation for the time it takes for SDL_Delay to
-	   execute, or maybe sys_timer is too slow */
-/*
 	SDL_Delay(us/1000);
-*/    
 }
 
 
@@ -310,8 +299,7 @@ void sys_initpath()
     return;
 }
 
-void sys_sanitize(char *s)
-{
+void sys_sanitize(char *s) {
 }
 
 
